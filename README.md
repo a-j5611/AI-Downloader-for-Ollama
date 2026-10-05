@@ -32,7 +32,7 @@
 | 项目 | 要求 |
 |---|---|
 | 系统 | Windows 10 / 11（64 位） |
-| **Python** | **不需要安装**：项目自带 `runtime\python\`（CPython 3.12 + tkinter/tcl-tk 8.6 + Pillow 12.3，已裁剪，约 56 MB） |
+| **Python** | **不需要安装**：项目自带 `runtime\python\`（CPython 3.12 + tkinter/tcl-tk 8.6 + Pillow 12.3，已裁剪，约 56 MB，runtime.zip，需要解压） |
 | Ollama | 需要本机安装 [Ollama](https://ollama.com/download) 并保持服务运行（程序也能自行启动它）（附Ollamav0.35.1安装包） |
 | 磁盘 | 下载的模型会占用较多空间，请预留足够容量（可在「下载位置」绑定到空闲磁盘） |
 
