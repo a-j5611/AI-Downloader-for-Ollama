@@ -1,0 +1,15 @@
+# Python 缓存（运行时自动重建）
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 本地自检 / 临时目录
+.selftest/
+*.log
+
+# 已取消的安装包工作目录（如再次需要可重建）
+installer/
+
+# 系统文件
+Thumbs.db
+desktop.ini
