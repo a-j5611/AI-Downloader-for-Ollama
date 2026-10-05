@@ -20,7 +20,7 @@
 
 启动器会**优先用项目自带的解释器**；万一 `runtime\\` 缺失或损坏，会自动回退到系统安装的 Python（需含 tkinter 与 pillow）。
 
-（附：Ollama下载链接：官方：https://ollama.com/download GitHub：https://github.com/ollama/ollama）
+（附：Ollama下载链接：官方：https://ollama.com/download GitHub：https://github.com/ollama/ollama ）
 
 ## 使用教程
 
