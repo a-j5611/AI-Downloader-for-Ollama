@@ -80,6 +80,7 @@ app/
 `%APPDATA%\AIDownloader\config.json`：主题、语言、背景、主机地址、Ollama 目录、**模型目录与历史绑定位置**、
 下载线程数与镜像源、目录排序/筛选、待续传模型。
 缓存：`%APPDATA%\AIDownloader\cache\`；出错日志：`%APPDATA%\AIDownloader\error.log`。
+程序依赖Python环境（制作环境Python3.12）
 
 \---
 
