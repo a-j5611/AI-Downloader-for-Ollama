@@ -33,7 +33,7 @@
 |精确体积|`https://registry.ollama.ai/v2/library/<模型>/manifests/<版本>`|
 |下载|本机 Ollama 服务的 `/api/pull`、`/api/delete`|
 
-结果会缓存到 `%APPDATA%\\\\\\\\\\\\\\\\AIDownloader\\\\\\\\\\\\\\\\cache\\\\\\\\\\\\\\\\`（目录 6 小时、版本列表 6 小时），
+结果会缓存到 `%APPDATA%\AIDownloader\cache\`（目录 6 小时、版本列表 6 小时），
 **离线也能浏览**，右上角「刷新目录」可随时更新。
 
 ## 怎么用
@@ -47,9 +47,6 @@
 
 ## 绑定下载位置（自动识别已下载模型）
 
-Ollama 只认一个 `OLLAMA\\\\\\\_MODELS` 目录 —— 换了目录，原来的模型就"看不见"了（**文件其实还在**）。
-所以这里做了「绑定 + 自动识别」：
-
 1. **设置 → 下载位置（模型库）** → 点「选择文件夹…」选中任意目录（例如原来那台盘上的 `E:\\\\\\\\Ollama\\\\\\\\models`）；
 2. 点「切换并重启 Ollama」，程序会**停服务 → 用新的 `OLLAMA\\\\\\\_MODELS` 起服务**，新下载的模型就落到绑定位置；
 3. 程序会**自动扫描该目录**（实测 6 个版本 / 30.87 GB **0.01 秒**扫完），把里面的模型全部列出来，
@@ -57,7 +54,6 @@ Ollama 只认一个 `OLLAMA\\\\\\\_MODELS` 目录 —— 换了目录，原来�
 4. 若正在运行的 Ollama 用的不是绑定目录，界面会明确提示并给出一键「切换并重启」；
 5. 最近用过的位置会留成快捷按钮，随时切回。
 
-> 扫描只读 `manifests/\\\\\\\*\\\\\\\*` 与很小的 config blob，不碰权重文件，所以再大的库也是瞬间完成。
 > 若某个版本的权重缺失，会标出「缺失层」，不会被当成可用模型。
 
 ## 目录结构
@@ -66,29 +62,26 @@ Ollama 只认一个 `OLLAMA\\\\\\\_MODELS` 目录 —— 换了目录，原来�
 AIDownloader.pyw          入口（无控制台窗口，单实例）
 启动 AI Downloader.bat     启动器
 app/
-  main\\\\\\\_window.py          窗口外壳：画布卡片布局、导航、下载指示条、状态轮询
-  views\\\\\\\_catalog.py        ★ AI 模型库：全量列表 + 版本面板 + 下载
+  main\_window.py          窗口外壳：画布卡片布局、导航、下载指示条、状态轮询
+  views\_catalog.py        ★ AI 模型库：全量列表 + 版本面板 + 下载
   catalog.py              ★ 目录抓取/解析/缓存、版本与精确体积
   downloads.py            ★ 下载队列：进度、取消、续传、停滞检测、完整性核对
-  mirror\\\\\\\_dl.py            ★ 多线程/镜像下载引擎（Range 分段 + 断点续传 + SHA-256 校验）
-  dl\\\\\\\_dialog.py            下载前弹窗：线程数 / 下载源 / 测速
+  mirror\_dl.py            ★ 多线程/镜像下载引擎（Range 分段 + 断点续传 + SHA-256 校验）
+  dl\_dialog.py            下载前弹窗：线程数 / 下载源 / 测速
   library.py              ★ 下载位置绑定：扫描模型目录、探测服务实际目录
   panels.py               已安装 / 服务 / 设置 / 日志
-  ollama\\\\\\\_api.py           Ollama HTTP 客户端 + 服务管理 + 速率计
+  ollama\_api.py           Ollama HTTP 客户端 + 服务管理 + 速率计
   storage.py              磁盘层：完全删除、孤儿清理、残留分片
   widgets.py / theme.py / i18n.py / config.py / backgrounds.py
 ```
 
 ## 配置
 
-`%APPDATA%\\\\\\\\AIDownloader\\\\\\\\config.json`：主题、语言、背景、主机地址、Ollama 目录、**模型目录与历史绑定位置**、
+`%APPDATA%\AIDownloader\config.json`：主题、语言、背景、主机地址、Ollama 目录、**模型目录与历史绑定位置**、
 下载线程数与镜像源、目录排序/筛选、待续传模型。
-缓存：`%APPDATA%\\\\\\\\AIDownloader\\\\\\\\cache\\\\\\\\`；出错日志：`%APPDATA%\\\\\\\\AIDownloader\\\\\\\\error.log`。
+缓存：`%APPDATA%\AIDownloader\cache\`；出错日志：`%APPDATA%\AIDownloader\error.log`。
 
 \---
-
-> 原 DeepSeek Controller（带对话/识图/联网检索）\\\\\\\\\\\\\\\*\\\\\\\\\\\\\\\*仍保留在\\\\\\\\\\\\\\\*\\\\\\\\\\\\\\\* `D:\\\\\\\\\\\\\\\\Desktop\\\\\\\\\\\\\\\\Code\\\\\\\\\\\\\\\\CodeProject\\\\\\\\\\\\\\\\DeepSeekController`，
-> 确认不再需要后可直接删除那个目录。
 
 本项目已上传Github
 爱写作业的好汉 2026.10.5
