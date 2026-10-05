@@ -1,12 +1,8 @@
-<<<<<<< HEAD
-# AI-Downloader-for-Ollama
-一个适用于Ollama的AI模型下载器
-=======
 （项目由Deep Seek -v4.1 flash 制作）
 
 # AI Downloader
 
-**Ollama 模型下载器** —— 打开就是全部 AI 模型与它们的全部版本，点一下就开始下载。
+**Ollama 模型下载器** 
 
 \---
 
