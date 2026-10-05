@@ -16,9 +16,11 @@
 |-|-|
 |系统|Windows 10 / 11（64 位）|
 |**Python**|**不需要安装**：项目自带 `runtime\\python\\`（CPython 3.12 + tkinter/tcl-tk 8.6 + Pillow 12.3）|
-|Ollama|需要本机安装 [Ollama](https://ollama.com/download) |
+|Ollama|需要本机安装 Ollama|
 
 启动器会**优先用项目自带的解释器**；万一 `runtime\\` 缺失或损坏，会自动回退到系统安装的 Python（需含 tkinter 与 pillow）。
+
+（附：Ollama下载链接：官方：https://ollama.com/download GitHub：https://github.com/ollama/ollama）
 
 ## 使用教程
 
