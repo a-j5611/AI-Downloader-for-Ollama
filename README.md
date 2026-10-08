@@ -2,7 +2,7 @@
 
 一个适用于 Ollama 的 AI 模型下载器（Windows 桌面程序）。
 
-> 项目由 DeepSeek-V4.1-flash 制作。
+> 项目由 DeepSeek-V4.1-flash 制作。（怒烧4亿3千万token，我无疑是难绷的）
 
 \---
 
@@ -15,7 +15,6 @@
 |项目|要求|
 |-|-|
 |系统|Windows 10 / 11（64 位）|
-|**Python**|**不需要安装**：项目自带 `runtime\\python\\`（CPython 3.12 + tkinter/tcl-tk 8.6 + Pillow 12.3）|
 |Ollama|需要本机安装 Ollama|
 
 启动器会**优先用项目自带的解释器**；万一 `runtime\\` 缺失或损坏，会自动回退到系统安装的 Python（需含 tkinter 与 pillow）。
@@ -77,3 +76,6 @@ release\\                 更新ZIP文件
 `%APPDATA%\\AIDownloader\\config.json`：主题、语言、背景、主机地址、Ollama 目录、
 **模型目录与历史绑定位置**、下载线程数与镜像源、目录排序/筛选、待续传模型。
 缓存：`%APPDATA%\\AIDownloader\\cache\\`；错误日志：`%APPDATA%\\AIDownloader\\error.log`。
+
+
+爱写作业的好汉 2026.10.8
