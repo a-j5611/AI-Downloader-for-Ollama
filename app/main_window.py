@@ -20,7 +20,8 @@ from .i18n import set_lang, t as T
 from .ollama_api import OllamaClient, ServiceManager
 from .panels import LogsView, ModelsView, ServiceView, SettingsView
 from .views_catalog import CatalogView
-from .widgets import (ProgressBar, PillButton, ScrollFrame, StatusDot, round_rect,
+from .widgets import (ProgressBar, PillButton, ScrollFrame, StatusDot,
+                      round_rect, soft_round_rect,
                       style_scrollbar, text_width)
 
 def parse_size(text: str) -> int:
@@ -44,7 +45,7 @@ GAP = 14        # 卡片间距
 NAV_W = 238     # 侧栏宽度
 TOP_H = 64      # 顶栏高度
 PAD = 7         # 内容与卡片边缘的间隙（露出圆角）
-RADIUS = 16
+RADIUS = 8      # Windows 11 卡片圆角
 
 
 # ============================================================ 事件日志
@@ -134,8 +135,9 @@ class NavItem(tk.Canvas):
         self.delete("all")
         w, h = self._cw, self._ch
         if self._active:
-            round_rect(self, 0, 2, w, h - 2, 10, fill=th.c("chip"), outline="")
-            self.create_rectangle(0, h / 2 - 9, 3, h / 2 + 9, fill=th.c("accent"), outline="")
+            soft_round_rect(self, 0, 2, w, h - 2, 7, fill=th.c("nav_active"),
+                            bg=th.c("card"), soften=0.55)
+            round_rect(self, 3, h / 2 - 8, 6, h / 2 + 8, 2, fill=th.c("accent"), outline="")
         elif self._hover:
             round_rect(self, 0, 2, w, h - 2, 10, fill=th.c("card_hover"), outline="")
         color = th.c("accent") if self._active else (
@@ -179,7 +181,8 @@ class MainWindow(tk.Tk):
         super().__init__()
         self.cfg = cfgmod.load()
         set_lang(self.cfg.get("lang", "zh"))
-        th.set_mode(self.cfg.get("theme", "dark"))
+        # 支持「跟随 Windows」：theme=auto 时按系统浅/深色；accent=auto 时吸系统强调色
+        th.apply(self.cfg.get("theme", "auto"), self.cfg.get("accent", "auto"))
 
         self.event_log = EventLog()
         self.bg = BackgroundManager(self.cfg)
@@ -219,7 +222,9 @@ class MainWindow(tk.Tk):
         self.after(300, self.refresh_installed)
         self.after(400, self.scan_library)
         self.after(1200, lambda: self.views["catalog"].on_show())
+        self.after(60, lambda: th.set_win11_frame(self))
         self.event_log.add("INFO", f"{APP_NAME} {__version__} started")
+        self.event_log.add("INFO", f"theme={th.current()} accent={th.accent_name()}")
         self.event_log.add("INFO", f"models dir: {self.cfg.get('models_dir')}")
 
     # ------------------------------------------------ 初始化
@@ -397,7 +402,11 @@ class MainWindow(tk.Tk):
 
     def _render_background(self):
         size = (self.winfo_width(), self.winfo_height())
-        photo = self.bg.render(size)
+        # preset == "auto"：不画渐变，直接用 Win11 的纯色底（随主题变化）
+        if (getattr(self.bg, "preset", "") == "auto") and not getattr(self.bg, "source", ""):
+            photo = None
+        else:
+            photo = self.bg.render(size)
         self.canvas.delete("bgimg")
         if photo is not None:
             self._bg_photo = photo
@@ -416,11 +425,10 @@ class MainWindow(tk.Tk):
 
     def _draw_cards(self):
         self.canvas.delete("card")
+        # Win11：卡片是「填充 + 1px 描边」，不用硬阴影
         for (x1, y1, x2, y2) in self._card_rects:
-            round_rect(self.canvas, x1 + 2, y1 + 4, x2 + 2, y2 + 4, RADIUS,
-                       fill=th.c("shadow"), outline="", tags="card")
             round_rect(self.canvas, x1, y1, x2, y2, RADIUS,
-                       fill=th.c("card"), outline="", tags="card")
+                       fill=th.c("card"), outline=th.c("border"), width=1, tags="card")
         # 背景图在 _render_background 里已置于最底层；
         # 若再执行 tag_lower("card", "bgimg") 反而会把卡片压到壁纸下面，
         # 使卡片描边那一圈露出壁纸（看似杂散笔画）。
@@ -736,6 +744,12 @@ class MainWindow(tk.Tk):
         self.apply_texts()
         self.save_cfg()
 
+    def _apply_win11_frame(self):
+        try:
+            th.set_win11_frame(self)
+        except Exception:
+            pass
+
     def _apply_all_theme(self):
         style_scrollbar(self._style())
         self.configure(bg=th.c("root"))
@@ -781,6 +795,7 @@ class MainWindow(tk.Tk):
             self.event_log.add("ERROR", f"migrate: {exc}")
         self._render_background()
         self._draw_cards()
+        self._apply_win11_frame()
 
     def apply_texts(self):
         self.app_sub.configure(text=T("app.subtitle"))

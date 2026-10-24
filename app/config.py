@@ -11,14 +11,15 @@ CONFIG_DIR = Path(os.environ.get("APPDATA") or Path.home()) / APP_DIR_NAME
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULTS: dict = {
-    "theme": "dark",              # dark | light
+    "theme": "auto",              # auto（跟随 Windows）| light | dark
+    "accent": "auto",             # auto（跟随 Windows）| blue/teal/green/purple/pink/red/orange/gray
     "lang": "zh",                 # zh | en
     "host": "http://127.0.0.1:11434",
     "ollama_dir": r"D:\Ollama",
     "models_dir": r"D:\Ollama\models",
     "background": {
         "source": "",
-        "preset": "midnight",
+        "preset": "auto",        # auto = Win11 纯色底（随主题）
         "blur": 0,
         "dim": 35,
         "library": [],

@@ -6,7 +6,7 @@
 
 ![DeepSeek token](./images/token.jpg)
 
-\---
+![展示](./images/Show.jpg)
 
 ## 功能
 
@@ -19,7 +19,7 @@
 |系统|Windows 10 / 11（64 位）|
 |Ollama|需要本机安装 Ollama|
 
-启动器会**优先用项目自带的解释器**；万一 `runtime\\` 缺失或损坏，会自动回退到系统安装的 Python（需含 tkinter 与 pillow）。
+启动器会**优先用项目自带的解释器**； `runtime\\` 缺失或损坏，会自动回退到系统安装的 Python（需含 tkinter 与 pillow）。
 
 （附：Ollama下载链接：官方：https://ollama.com/download GitHub：https://github.com/ollama/ollama ）
 
@@ -31,6 +31,7 @@
 2. 点任意模型，右侧列出它的**全部版本与体积**；
 3. 点版本行「下载」；
 4. 下载完成后模型出现在「已安装」页，可删除，或在「AI 模型库」里点「重新下载」。
+
 
 ## 目录数据来源
 
@@ -56,18 +57,18 @@
 
 ```
 AIDownloader.pyw          入口（无控制台窗口，单实例）
-启动 AI Downloader.bat     启动器（优先使用自带解释器）
-runtime\\python\\           自带 Python 运行时（CPython 3.12 + tkinter + Pillow）
+启动 AI Downloader.bat    启动器（优先使用自带解释器）
+runtime\\python\\         自带 Python 运行时（CPython 3.12 + tkinter + Pillow）
 app\\
-  main\_window.py          窗口外壳：画布卡片布局、导航、下载指示条、状态轮询
-  views\_catalog.py        ★ AI 模型库：全量列表 + 版本面板 + 下载
-  catalog.py              ★ 目录抓取/解析/缓存、版本与精确体积
-  downloads.py            ★ 下载队列：进度、取消、续传、停滞检测、完整性核对
-  mirror\_dl.py            ★ 多线程/镜像下载引擎（Range 分段 + 断点续传 + SHA-256 校验）
-  dl\_dialog.py            下载前弹窗：线程数 / 下载源 / 测速
-  library.py              ★ 下载位置绑定：扫描模型目录、探测服务实际目录
+  main\_window.py         窗口外壳：画布卡片布局、导航、下载指示条、状态轮询
+  views\_catalog.py       AI 模型库：全量列表 + 版本面板 + 下载
+  catalog.py              目录抓取/解析/缓存、版本与精确体积
+  downloads.py            下载队列：进度、取消、续传、停滞检测、完整性核对
+  mirror\_dl.py           多线程/镜像下载引擎（Range 分段 + 断点续传 + SHA-256 校验）
+  dl\_dialog.py           下载前弹窗：线程数 / 下载源 / 测速
+  library.py              下载位置绑定：扫描模型目录、探测服务实际目录
   panels.py               已安装 / 服务 / 设置 / 日志
-  ollama\_api.py           Ollama HTTP 客户端 + 服务管理 + 速率计
+  ollama\_api.py          Ollama HTTP 客户端 + 服务管理 + 速率计
   storage.py              磁盘层：完全删除、孤儿清理、残留分片
   widgets.py / theme.py / i18n.py / config.py / backgrounds.py
 release\\                 更新ZIP文件
@@ -79,5 +80,4 @@ release\\                 更新ZIP文件
 **模型目录与历史绑定位置**、下载线程数与镜像源、目录排序/筛选、待续传模型。
 缓存：`%APPDATA%\\AIDownloader\\cache\\`；错误日志：`%APPDATA%\\AIDownloader\\error.log`。
 
-
-爱写作业的好汉 2026.10.8
+爱写作业的好汉 2026.10.24

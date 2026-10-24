@@ -25,15 +25,48 @@ def text_width(text: str, spec) -> int:
         return len(text) * 8
 
 
+def _corner_arc(cx, cy, r, start_deg, end_deg, steps=8):
+    """生成一段圆弧上的点（角度制，屏幕坐标 y 向下）。"""
+    import math
+
+    pts = []
+    for i in range(steps + 1):
+        angle = math.radians(start_deg + (end_deg - start_deg) * i / steps)
+        pts.extend((cx + r * math.cos(angle), cy + r * math.sin(angle)))
+    return pts
+
+
 def round_rect(canvas: tk.Canvas, x1, y1, x2, y2, r, **kwargs):
-    """画圆角矩形（smooth 多边形近似），返回 item id。"""
-    r = max(0, min(r, (x2 - x1) / 2, (y2 - y1) / 2))
-    pts = [
-        x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
-        x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
-        x1, y2, x1, y2 - r, x1, y1 + r, x1, y1,
-    ]
-    return canvas.create_polygon(pts, smooth=True, splinesteps=18, **kwargs)
+    """画圆角矩形，返回 item id。
+
+    用**密集圆弧多边形**（每角 8 段）而不是稀疏样条：
+    Canvas 没有抗锯齿，点越密轮廓越平顺，边缘看起来就不"硬"了。
+    """
+    r = max(0.0, min(float(r), (x2 - x1) / 2, (y2 - y1) / 2))
+    if r <= 0.5:
+        return canvas.create_polygon(
+            [x1, y1, x2, y1, x2, y2, x1, y2], smooth=False, **kwargs)
+    pts = []
+    pts += _corner_arc(x1 + r, y1 + r, r, 180, 270)      # 左上
+    pts += _corner_arc(x2 - r, y1 + r, r, 270, 360)      # 右上
+    pts += _corner_arc(x2 - r, y2 - r, r, 0, 90)         # 右下
+    pts += _corner_arc(x1 + r, y2 - r, r, 90, 180)       # 左下
+    return canvas.create_polygon(pts, smooth=False, **kwargs)
+
+
+def soft_round_rect(canvas: tk.Canvas, x1, y1, x2, y2, r, fill: str, bg: str,
+                    outline: str = "", width: int = 1, soften: float = 0.45):
+    """带柔化边缘的圆角矩形。
+
+    先画一圈「填充色 ↔ 背景色」的混色环（比本体大 1px），
+    再画本体，轮廓与背景之间就有了过渡，不再是生硬的色块切线。
+    """
+    if bg and bg.lower() != fill.lower():
+        ring = th.blend(fill, bg, soften)
+        round_rect(canvas, x1 - 0.6, y1 - 0.6, x2 + 0.6, y2 + 0.6, r + 0.6,
+                   fill=ring, outline="")
+    return round_rect(canvas, x1, y1, x2, y2, r, fill=fill, outline=outline,
+                      width=width)
 
 
 def _parent_bg(widget) -> str:
@@ -62,34 +95,61 @@ class PillButton(tk.Canvas):
         self._min_width = min_width
         self._enabled = True
         self._hover = False
+        self._pressed = False
         self._ch = height
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
-        self.bind("<Button-1>", self._on_click)
+        self.bind("<ButtonPress-1>", self._on_press)
+        self.bind("<ButtonRelease-1>", self._on_click)
         self._redraw()
 
     # ------------------------------------------------ 内部
     def _colors(self):
-        kind = self._kind
+        """返回 (填充色, 文字色, 描边色)；Windows 11 按钮语义：
+
+        primary  = 强调色实心按钮
+        secondary= control 填充 + 描边（默认）
+        ghost    = 平时透明、悬停才显出 control 填充（Win11 subtle button）
+        danger   = 错误色实心
+        """
         if not self._enabled:
-            return th.c("card_alt"), th.c("text_faint")
+            return th.c("control"), th.c("text_faint"), th.c("border")
+        kind = self._kind
         if kind == "primary":
-            return (th.c("accent_hover") if self._hover else th.c("accent")), th.c("accent_text")
+            fill = th.c("accent_hover") if self._hover else (
+                th.c("accent_pressed") if self._pressed else th.c("accent"))
+            return fill, th.c("accent_text"), fill
         if kind == "danger":
-            base = th.c("err")
-            return (th.c("err") if not self._hover else "#ff8080"), "#ffffff"
+            fill = th.c("err") if not self._hover else th.shade(th.c("err"), 0.12)
+            return fill, "#FFFFFF", fill
         if kind == "ghost":
-            return (th.c("card_hover") if self._hover else th.c("card_alt")), th.c("text")
-        return (th.c("card_hover") if self._hover else self._bg_owner), th.c("text_muted")
+            if self._pressed:
+                return th.c("card_alt"), th.c("text"), th.c("card_alt")
+            if self._hover:
+                return th.c("control_hover"), th.c("text"), th.c("control_hover")
+            return self._bg_owner, th.c("text"), self._bg_owner
+        if kind == "flat":
+            return self._bg_owner, th.c("text"), self._bg_owner
+        # secondary
+        fill = th.c("control_hover") if (self._hover or self._pressed) else th.c("control")
+        return fill, th.c("text"), th.c("border")
 
     def _redraw(self):
         self.delete("all")
-        bg, fg = self._colors()
+        bg, fg, stroke = self._colors()
         # 宽度由文字实测宽度决定（不能用 <Configure> 回写，否则文字会被裁掉）
         w = max(text_width(self._text, self._font) + self._pad * 2, self._min_width, 28)
         h = self._ch
         if self._kind != "flat":
-            round_rect(self, 1, 1, w - 1, h - 1, self._radius, fill=bg, outline="")
+            radius = min(self._radius, 6)          # 略微放宽圆角，视觉更柔和
+            if self._kind in ("primary", "danger"):
+                soft_round_rect(self, 1, 1, w - 1, h - 1, radius, fill=bg,
+                                bg=self._bg_owner)
+            else:
+                # 次要/幽灵按钮：柔化过渡 + 1px 描边
+                soft_round_rect(self, 1, 1, w - 1, h - 1, radius, fill=bg,
+                                bg=self._bg_owner,
+                                outline=stroke if stroke != self._bg_owner else "", width=1)
         self.create_text(w / 2, h / 2 + 1, text=self._text, fill=fg, font=self._font)
         self.configure(width=w)
 
@@ -99,9 +159,18 @@ class PillButton(tk.Canvas):
 
     def _on_leave(self, _e=None):
         self._hover = False
+        self._pressed = False
+        self._redraw()
+
+    def _on_press(self, _e=None):
+        if not self._enabled:
+            return
+        self._pressed = True
         self._redraw()
 
     def _on_click(self, _e=None):
+        self._pressed = False
+        self._redraw()
         if self._enabled and self._command:
             self._command()
 
@@ -145,14 +214,16 @@ class Segmented(tk.Canvas):
         n = max(len(self._segs), 1)
         w = self._seg_w * n
         h = self._ch
-        round_rect(self, 0, 0, w, h, self._radius, fill=th.c("card_alt"), outline="")
+        radius = min(self._radius, 5)
+        round_rect(self, 0, 0, w, h, radius, fill=th.c("control"), outline=th.c("border"))
+
         for i, (value, label) in enumerate(self._segs):
             x1 = i * self._seg_w
             x2 = x1 + self._seg_w
             active = value == self._value
             if active:
-                round_rect(self, x1 + 3, 3, x2 - 3, h - 3, max(4, self._radius - 3),
-                           fill=th.c("accent"), outline="")
+                soft_round_rect(self, x1 + 2, 2, x2 - 2, h - 2, max(3, radius - 1),
+                                fill=th.c("accent"), bg=th.c("control"), soften=0.5)
             # 标签过长会溢出到相邻格，这里自动截断加省略号
             font = th.F(10, "bold" if active else "normal")
             avail = self._seg_w - 14
@@ -162,7 +233,7 @@ class Segmented(tk.Canvas):
                     text = text[:-1]
                 text = (text + "…") if text else ""
             self.create_text((x1 + x2) / 2, h / 2 + 1, text=text,
-                             fill=th.c("accent_text") if active else th.c("text_muted"),
+                             fill=th.c("accent_text") if active else th.c("text"),
                              font=font)
         self.configure(width=w)
 
@@ -223,11 +294,19 @@ class Toggle(tk.Canvas):
     def _redraw(self):
         self.delete("all")
         w, h = self._cw, self._ch
-        track = th.c("accent") if self._value else th.c("trough")
-        round_rect(self, 1, 1, w - 1, h - 1, h / 2, fill=track, outline="")
-        r = h / 2 - 3
+        if self._value:
+            soft_round_rect(self, 1, 1, w - 1, h - 1, h / 2, fill=th.c("accent"),
+                            bg=self._bg_owner, outline="", soften=0.5)
+            knob = "#FFFFFF"
+        else:
+            round_rect(self, 1, 1, w - 1, h - 1, h / 2, fill=th.c("control"),
+                       outline=th.c("border"))
+            knob = th.c("text_faint")
+        r = h / 2 - 4
         cx = (w - h / 2) if self._value else (h / 2)
-        self.create_oval(cx - r, h / 2 - r, cx + r, h / 2 + r, fill="#ffffff", outline="")
+        cy = h / 2
+        self.create_oval(cx - r, cy - r, cx + r, cy + r, fill=knob,
+                         outline="" if self._value else th.c("text_faint"))
 
     def _on_click(self, _e=None):
         self._value = not self._value
@@ -283,13 +362,19 @@ class StatusDot(tk.Canvas):
 
 # ============================================================ 细滚动条样式
 def style_scrollbar(style: ttk.Style) -> None:
+    # Win11 滚动条：细、无箭头、悬停变深
     style.configure(
         "DS.Vertical.TScrollbar",
-        gripcount=0, background=th.c("scroll"), darkcolor=th.c("card"),
-        lightcolor=th.c("card"), troughcolor=th.c("card"), bordercolor=th.c("card"),
-        arrowcolor=th.c("text_muted"), relief="flat", arrowsize=10, width=10,
+        gripcount=0, background=th.c("scroll"), darkcolor=th.c("scroll"),
+        lightcolor=th.c("scroll"), troughcolor=th.c("card"), bordercolor=th.c("card"),
+        arrowcolor=th.c("card"), relief="flat", arrowsize=1, width=8,
+        borderwidth=0,
     )
-    style.map("DS.Vertical.TScrollbar", background=[("active", th.c("accent"))])
+    style.map(
+        "DS.Vertical.TScrollbar",
+        background=[("active", th.c("text_faint")), ("pressed", th.c("accent"))],
+        arrowcolor=[("active", th.c("card"))],
+    )
 
 
 # ============================================================ 滚动容器
@@ -366,10 +451,12 @@ class ProgressBar(tk.Canvas):
         self.delete("all")
         w = max(self.winfo_width(), 10)
         h = self._ch
-        round_rect(self, 0, 0, w, h, self._radius, fill=th.c("trough"), outline="")
+        r = min(h / 2, self._radius)
+        round_rect(self, 0, 0, w, h, r, fill=th.c("trough"), outline="")
         fill_w = int(w * self._value)
         if fill_w > 2:
-            round_rect(self, 0, 0, fill_w, h, min(self._radius, fill_w / 2), fill=th.c("accent"), outline="")
+            soft_round_rect(self, 0, 0, fill_w, h, min(r, fill_w / 2),
+                            fill=th.c("accent"), bg=th.c("trough"), soften=0.5)
 
     def apply_theme(self, bg: str | None = None):
         if bg:
@@ -425,12 +512,16 @@ class Slider(tk.Canvas):
         h = self._ch
         cy = h / 2
         x1, x2 = self._pad, self._cw - self._pad
-        round_rect(self, x1, cy - 2, x2, cy + 2, 4, fill=th.c("trough"), outline="")
+        round_rect(self, x1, cy - 2, x2, cy + 2, 2, fill=th.c("trough"), outline="")
         kx = self._value_to_x()
         if kx > x1 + 1:
-            round_rect(self, x1, cy - 2, kx, cy + 2, 4, fill=th.c("accent"), outline="")
-        r = 8
-        self.create_oval(kx - r, cy - r, kx + r, cy + r, fill=th.c("accent"), outline=th.c("card"), width=2)
+            round_rect(self, x1, cy - 2, kx, cy + 2, 2, fill=th.c("accent"), outline="")
+        r = 9 if self._dragging else 8
+        # 滑块：强调色圆点 + 一圈卡片色描边（Win11 滑条的样子）
+        self.create_oval(kx - r - 2, cy - r - 2, kx + r + 2, cy + r + 2,
+                         fill=th.c("card"), outline=th.c("border"))
+        self.create_oval(kx - r, cy - r, kx + r, cy + r,
+                         fill=th.c("accent"), outline=th.c("accent"))
 
     def _on_configure(self, event):
         if abs(event.width - self._cw) > 1:

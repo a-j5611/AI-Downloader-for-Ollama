@@ -14,6 +14,9 @@ except Exception:  # pragma: no cover
 
 # 内置渐变（用于未选择图片时）
 PRESETS: dict[str, dict] = {
+    # auto = 不画渐变，直接用 Windows 11 的纯色底（随主题变化）
+    "auto":      {"zh": "跟随主题（纯色）", "en": "Follow theme (solid)",
+                  "top": "#f3f3f3", "bottom": "#f3f3f3"},
     "midnight":  {"zh": "午夜",   "en": "Midnight",  "top": "#0f2027", "bottom": "#2c5364"},
     "graphite":  {"zh": "石墨",   "en": "Graphite",  "top": "#232526", "bottom": "#4b5563"},
     "ocean":     {"zh": "深海",   "en": "Ocean",     "top": "#1a2980", "bottom": "#26d0ce"},
@@ -53,7 +56,7 @@ class BackgroundManager:
     @property
     def preset(self) -> str:
         pid = self.bg.get("preset") or "midnight"
-        return pid if pid in PRESETS else "midnight"
+        return pid if (pid in PRESETS or pid == "auto") else "auto"
 
     @property
     def blur(self) -> int:
@@ -143,6 +146,9 @@ class BackgroundManager:
 
     def render(self, size: tuple[int, int]):
         """返回 PhotoImage；无 Pillow 或渲染失败时返回 None。"""
+        # auto = 跟随主题的 Win11 纯色底，不画渐变
+        if getattr(self, "preset", "") == "auto" and not getattr(self, "source", ""):
+            return None
         if not HAS_PIL:
             return None
         w, h = int(size[0]), int(size[1])

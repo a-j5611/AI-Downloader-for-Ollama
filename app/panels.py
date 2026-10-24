@@ -884,6 +884,43 @@ class ServiceView(Panel):
 
 
 # ============================================================ 设置
+class AccentSwatch(tk.Canvas):
+    """强调色色块：圆形色点，选中时外加一圈描边（Win11 个性化页的样子）。"""
+
+    def __init__(self, parent, name: str, command=None, size: int = 26,
+                 bg: str | None = None):
+        self._parent_bg = bg or th.c("card_alt")
+        super().__init__(parent, width=size, height=size, highlightthickness=0, bd=0,
+                         bg=self._parent_bg)
+        self.name = name
+        self._size = size
+        self._command = command
+        self._selected = False
+        self.bind("<Button-1>", lambda _e: self._command and self._command(self.name))
+        self._redraw()
+
+    def _color(self) -> str:
+        if self.name == "auto":
+            return th.c("accent")
+        pair = th.ACCENTS.get(self.name)
+        if not pair:
+            return th.c("accent")
+        return pair[1] if th.is_dark() else pair[0]
+
+    def set_selected(self, selected: bool):
+        self._selected = bool(selected)
+        self._redraw()
+
+    def _redraw(self):
+        self.delete("all")
+        s = self._size
+        color = self._color()
+        pad = 3 if self._selected else 4
+        if self._selected:
+            self.create_oval(1, 1, s - 1, s - 1, outline=color, width=2)
+        self.create_oval(pad, pad, s - pad, s - pad, fill=color, outline="")
+
+
 class SettingsView(Panel):
     title_key = "set.title"
 
@@ -928,11 +965,30 @@ class SettingsView(Panel):
         card = self._section(parent, T("set.appearance"))
         self.appearance_card = card
         row = self._row(card, "set.theme")
-        self.theme_seg = Segmented(row, [("light", T("set.theme_light")), ("dark", T("set.theme_dark"))],
-                                   command=self._on_theme, height=32, radius=9, seg_width=86,
-                                   bg=th.c("card_alt"))
+        self.theme_seg = Segmented(
+            row,
+            [("auto", T("set.theme_auto")), ("light", T("set.theme_light")),
+             ("dark", T("set.theme_dark"))],
+            command=self._on_theme, height=32, radius=9, seg_width=86,
+            bg=th.c("card_alt"))
         self.theme_seg.pack(side="left")
-        self.theme_seg.set_value(th.current())
+        self.theme_seg.set_value(self.app.cfg.get("theme", "auto"))
+
+        # ---- 强调色（Windows 11 的「个性化 → 颜色 → 强调色」）
+        accent_row = self._row(card, "set.accent")
+        self.accent_row = tk.Frame(accent_row, bg=th.c("card_alt"))
+        self.accent_row.pack(side="left")
+        self.accent_swatches: list[AccentSwatch] = []
+        current_accent = self.app.cfg.get("accent", "auto")
+        for name in ("auto",) + th.ACCENT_ORDER:
+            swatch = AccentSwatch(self.accent_row, name, command=self._on_accent,
+                                  bg=th.c("card_alt"))
+            swatch.pack(side="left", padx=(0, 6))
+            swatch.set_selected(name == current_accent)
+            self.accent_swatches.append(swatch)
+        self.accent_hint = tk.Label(accent_row, text="", bg=th.c("card_alt"),
+                                    fg=th.c("text_faint"), font=th.F(8))
+        self.accent_hint.pack(side="left", padx=(6, 0))
 
         row2 = self._row(card, "set.language")
         self.lang_seg = Segmented(row2, [(code, LANG_LABELS[code]) for code in LANGS],
@@ -941,9 +997,44 @@ class SettingsView(Panel):
         self.lang_seg.pack(side="left")
 
     def _on_theme(self, mode: str):
-        th.set_mode(mode)
+        th.set_mode(mode)                 # mode 可为 auto，内部解析成 light/dark
         self.app.cfg["theme"] = mode
         self.app.save_cfg()
+        self.app._apply_all_theme()
+        self.refresh_accent_swatches()
+
+    def _on_accent(self, name: str):
+        if name == "auto":
+            th.apply(self.app.cfg.get("theme", "auto"), "auto")
+        else:
+            th.set_accent(name)
+        self.app.cfg["accent"] = name
+        self.app.save_cfg()
+        self.app._apply_all_theme()
+        self.refresh_accent_swatches()
+        self.app.toast(T("set.accent_changed", self._accent_label(name)))
+
+    def _accent_label(self, name: str) -> str:
+        """强调色显示名（按当前界面语言取中文/英文名）。"""
+        if name == "auto":
+            return T("set.accent_auto")
+        pair = th.ACCENTS.get(name)
+        if not pair:
+            return name
+        zh = (self.app.cfg.get("lang") or "zh") == "zh"
+        return pair[2] if zh else pair[3]
+
+    def refresh_accent_swatches(self):
+        """主题/强调色变了以后，重画色块与说明。"""
+        if not getattr(self, "accent_swatches", None):
+            return
+        current = self.app.cfg.get("accent", "auto")
+        for swatch in self.accent_swatches:
+            swatch.configure(bg=th.c("card_alt"))
+            swatch.set_selected(swatch.name == current)
+        self.accent_hint.configure(
+            text=T("set.accent_current", self._accent_label(th.accent_name())),
+            bg=th.c("card_alt"), fg=th.c("text_faint"))
 
     def _on_lang(self, lang: str):
         from . import i18n
@@ -1295,7 +1386,8 @@ class SettingsView(Panel):
         self.bg_card.title_label.configure(text=T("set.background"))
         self.about_card.title_label.configure(text=T("set.about"))
         # 分段控件与行标签需要重译
-        self.theme_seg.set_options([("light", T("set.theme_light")),
+        self.theme_seg.set_options([("auto", T("set.theme_auto")),
+                                    ("light", T("set.theme_light")),
                                     ("dark", T("set.theme_dark"))], keep_value=True)
         self.lang_seg.set_options([(code, LANG_LABELS[code]) for code in LANGS], keep_value=True)
         for card in self.scroll.inner.winfo_children():
@@ -1312,8 +1404,9 @@ class SettingsView(Panel):
         self._render_presets()
 
     def on_show(self):
-        self.theme_seg.set_value(th.current())
+        self.theme_seg.set_value(self.app.cfg.get("theme", "auto"))
         self.lang_seg.set_value(self.app.cfg.get("lang", "zh"))
+        self.refresh_accent_swatches()
         self.refresh_library()
         self._sync_bg_labels()
         self._render_presets()
