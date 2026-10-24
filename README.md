@@ -2,7 +2,7 @@
 
 一个适用于 Ollama 的 AI 模型下载器（Windows 桌面程序）。
 
-> 项目由 DeepSeek-V4.1-flash 制作。（怒烧4亿3千万token，我无疑是难绷的）
+> 项目由 DeepSeek-V4.1-flash 制作。（怒烧4亿6千万token，我无疑是难绷的）
 
 ![DeepSeek token](./images/token.jpg)
 
